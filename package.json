@@ -1,0 +1,15 @@
+{
+  "name": "canvas-drawing-board",
+  "version": "1.0.0",
+  "description": "Javascript drawing board based on canvas",
+  "main": "./index.js",
+  "keywords": [
+    "canvas",
+    "drawing",
+    "board",
+    "drawing board",
+    "painting"
+  ],
+  "author": "alpaca",
+  "license": "MIT"
+}

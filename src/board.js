@@ -1,0 +1,404 @@
+import { lightweightEraserData, lightweightPencilData, percentageData, unpercentageData } from './tools/tool'
+import History from './tools/history'
+import Polygon from './tools/polygon'
+import Text from './tools/text'
+import Image from './tools/image'
+
+export default class Board {
+  constructor ({id = '', background = '#fff'} = {}) {
+    let container = document.getElementById(id)
+    let canvas = document.createElement('canvas')
+    canvas.width = container.offsetWidth
+    canvas.height = container.offsetHeight
+    container.appendChild(canvas)
+    this.width = canvas.width
+    this.height = canvas.height
+    this.canvas = canvas
+    // 画布属性
+    this.background = background
+    this.isPencelModel = true
+    this.radius = 30
+    this.size = 2
+    this.color = '#ff4500'
+    this.prevPoint = {}
+    this.ctx = canvas.getContext('2d')
+    this.ctx.lineWidth = this.size
+    this.ctx.strokeStyle = this.color
+    this.canDraw = false
+    // event pool
+    this.eventPool = {}
+    // temp point
+    this.pointList = []
+    // init event
+    this.mousedown = mousedown.bind(this)
+    this.mousemove = throttle(mousemove, this)
+    this.mouseup = mouseup.bind(this)
+    this.initEvent()
+    // init background
+    this.setBackground()
+    // init polygon
+    this.install('polygon', new Polygon(id))
+    this.install('text', new Text(id))
+    this.install('image', new Image(this))
+  }
+
+  initEvent () {
+    if (navigator.userAgent.match(/AppleWebKit.*Mobile.*/)) {
+      // mobile
+      addEvent(this.canvas, 'touchstart', this.mousedown)
+      addEvent(this.canvas, 'touchmove', this.mousemove)
+      addEvent(this.canvas, 'touchend', this.mouseup)
+    } else {
+      // pc
+      addEvent(this.canvas, 'mousedown', this.mousedown)
+      addEvent(this.canvas, 'mousemove', this.mousemove)
+      addEvent(this.canvas, 'mouseup', this.mouseup)
+    }
+  }
+
+  drawLine (form, to) {
+    this.ctx.beginPath()
+    this.ctx.moveTo(form.x, form.y)
+    this.ctx.lineTo(to.x, to.y)
+    this.ctx.stroke()
+  }
+
+  eraser (pos) {
+    let radius = this.radius
+    this.ctx.save()
+    this.ctx.beginPath()
+    this.ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
+    this.ctx.clip()
+    this.ctx.clearRect(pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius)
+    this.ctx.restore()
+  }
+
+  clear () {
+    this.setBackground()
+    // this.ctx.clearRect(0, 0, this.width, this.height)
+    this.emit('change', {type: 'clear'})
+  }
+
+  fill (color) {
+    let fillStyle = color || this.color
+    this.ctx.save()
+    this.ctx.fillStyle = fillStyle
+    this.ctx.fillRect(0, 0, this.width, this.height)
+    this.ctx.restore()
+    this.emit('change', {type: 'fill', data: {color: fillStyle}})
+  }
+
+  getMousePos (e) {
+    let clientX = e.clientX || e.touches[0].clientX
+    let clientY = e.clientY || e.touches[0].clientY
+    let rect = this.canvas.getBoundingClientRect()
+    let x = clientX - rect.left
+    let y = clientY - rect.top
+    return {x: x, y: y}
+  }
+
+  on (event, fn) {
+    this.eventPool[event] = fn
+  }
+
+  emit (event, ...args) {
+    if (this.eventPool[event]) {
+      this.eventPool[event].apply(this, args)
+    }
+  }
+
+  setBackground () {
+    this.reFill(this.background)
+    this.saveHistory()
+  }
+
+  saveHistory () {
+    this.History.saveHistory(this.getBase64())
+  }
+
+  setSize (num) {
+    if (typeof num !== 'number') {
+      return false
+    }
+    if (num <= 1) {
+      this.size = 1
+    } else if (num >= 10) {
+      this.size = 10
+    } else {
+      this.size = num
+    }
+  }
+
+  setColor (color) {
+    if (typeof color !== 'string') {
+      return false
+    }
+    this.color = color
+    this.ctx.strokeStyle = this.color
+  }
+
+  /**
+  * 接收线段数据，并绘画在画板
+  */
+  rePaintLine (data) {
+    let points = unpercentageData(data.data, this.width, this.height)
+    if (points.length < 1) {
+      return false
+    }
+    let origin = points[0]
+    this.ctx.save()
+    this.ctx.lineWidth = data.size
+    this.ctx.strokeStyle = data.color
+    points.forEach(item => {
+      this.drawLine(origin, item)
+      origin = item
+    })
+    this.ctx.restore()
+  }
+
+  /**
+  * 接收文字数据，并绘画在画板
+  */
+  rePaintText (data) {
+    this.ctx.save()
+    this.ctx.fillStyle = data.color
+    this.ctx.font = '16px Arial'
+    let top = data.y * this.height
+    data.data.forEach(item => {
+      this.ctx.beginPath()
+      this.ctx.fillText(item, data.x * this.width, top)
+      top += 20
+    })
+    this.ctx.restore()
+  }
+
+  /**
+  * 接收圆形数据，并绘画在画板
+  */
+  rePaintCircle (data) {
+    this.ctx.save()
+    this.ctx.beginPath()
+    this.ctx.lineWidth = data.size
+    this.ctx.strokeStyle = data.color
+    this.ctx.arc(data.x * this.width, data.y * this.height, data.r * this.width, 0, Math.PI * 2)
+    this.ctx.stroke()
+    this.ctx.restore()
+  }
+
+  /**
+  * 接收矩形数据，并绘画在画板
+  */
+  rePaintRect (data) {
+    this.ctx.save()
+    this.ctx.beginPath()
+    this.ctx.lineWidth = data.size
+    this.ctx.strokeStyle = data.color
+    this.ctx.rect(data.x * this.width, data.y * this.height, data.width * this.width, data.height * this.height)
+    this.ctx.stroke()
+    this.ctx.restore()
+  }
+
+  /**
+  * 接受橡皮擦数据
+  */
+  rePaintEraser (data) {
+    let points = unpercentageData(data.data, this.width, this.height)
+    let tempRadius = this.radius
+    this.radius = Math.max(tempRadius, this.width / data.width * tempRadius)
+    points.forEach(item => {
+      this.eraser(item)
+    })
+    this.radius = tempRadius
+  }
+
+  reClear () {
+    this.setBackground()
+    // this.ctx.clearRect(0, 0, this.width, this.height)
+  }
+
+  reFill (color) {
+    let fillStyle = color || this.color
+    this.ctx.save()
+    this.ctx.fillStyle = fillStyle
+    this.ctx.fillRect(0, 0, this.width, this.height)
+    this.ctx.restore()
+  }
+
+  reLine (data) {
+    this.ctx.save()
+    this.ctx.beginPath()
+    this.ctx.lineWidth = data.size
+    this.ctx.strokeStyle = data.color
+    this.ctx.moveTo(data.x * this.width, data.y * this.height)
+    this.ctx.lineTo(data.endX * this.width, data.endY * this.height)
+    this.ctx.stroke()
+    this.ctx.restore()
+  }
+
+  reDrawImage (data) {
+    let image = document.createElement('img')
+    let that = this
+    image.onload = function () {
+      if (image.width <= that.width) {
+        that.ctx.drawImage(image, 0, 0)
+      } else {
+        let per = that.width / image.width
+        that.ctx.drawImage(image, 0, 0, that.width, image.height * per)
+      }
+    }
+    image.onerror = function (err) {
+      throw err
+    }
+    image.src = data
+  }
+  /**
+  * 获取图层base64数据
+  * quality: 0 - 1 图片质量
+  */
+
+  getBase64 (quality = 0.7) {
+    return this.canvas.toDataURL('image/png', quality)
+  }
+
+  setBase64 (base64) {
+    let self = this
+    let image = document.createElement('img')
+    image.onload = function () {
+      self.ctx.drawImage(image, 0, 0)
+    }
+    image.src = base64
+  }
+  /**
+  *  type: jpg | png 
+  */
+  download ({name = '未命名图片', type = 'jpg'} = {}) {
+    if (type !== 'jpg' && type !== 'png') {
+      type = 'jpg'
+    }
+    let downloadLink = document.createElement('a')
+    let blob = createBlobByBase64(this.getBase64())
+    downloadLink.href = URL.createObjectURL(blob)
+    downloadLink.setAttribute('download', `${name}.${type}`)
+    downloadLink.click()
+  }
+
+  /**
+  * 回退
+  */
+  prev () {
+    let base64 = this.History.prevHistory()
+    if (base64 !== null) {
+      this.setBase64(base64)
+    }
+  }
+
+  /**
+  * 前进
+  */
+  next () {
+    let base64 = this.History.nextHistory()
+    if (base64 !== null) {
+      this.setBase64(base64)
+    }
+  }
+
+  /**
+  *  true => pencil ; false => eraser
+  */
+  setModel (bool) {
+    this.isPencelModel = bool
+  }
+
+  /**
+  * 安装额外插件
+  */
+  install (name, plugin) {
+    Board.prototype[name] = plugin
+  }
+}
+
+// 历史工具
+Board.prototype.History = new History()
+
+// 多少毫秒一帧
+const TIME = 22
+
+const mousedown = function (e) {
+  this.canDraw = true
+  this.prevPoint = this.getMousePos(e)
+  // 加入坐标集合
+  this.pointList.push(this.prevPoint)
+  // 设置属性
+  this.ctx.lineCap = 'round'
+  this.ctx.lineWidth = this.size
+  this.ctx.strokeStyle = this.color
+}
+
+const mousemove = function (e) {
+  if (!this.canDraw) {
+    return false
+  }
+  let nowPoint = this.getMousePos(e)
+  if (this.isPencelModel) {
+    this.drawLine(this.prevPoint, nowPoint)
+  } else {
+    this.eraser(nowPoint)
+  }
+  // 加入坐标集合
+  this.pointList.push(nowPoint)
+  // 记录当前坐标
+  this.prevPoint = nowPoint
+}
+
+const mouseup = function (e) {
+  this.canDraw = false
+  // 抛出事件
+  if (this.isPencelModel) {
+    this.pointList = lightweightPencilData(this.pointList, 2)
+    this.pointList = percentageData(this.pointList, this.width, this.height)
+    this.emit('change', {type: 'line', data: {
+      data: this.pointList,
+      color: this.color,
+      size: this.size
+    }})
+  } else {
+    this.pointList = lightweightEraserData(this.pointList, this.radius)
+    this.pointList = percentageData(this.pointList, this.width, this.height)
+    this.emit('change', {type: 'eraser', data: {data: this.pointList, width: this.width}})
+  }
+  this.pointList = []
+  // 记录操作
+  this.saveHistory()
+}
+
+const addEvent = (dom, event, fn) => {
+  dom.addEventListener(event, fn, false)
+}
+
+const throttle = (fn, ctx) => {
+  let timer = null
+  return function (e) {
+    if (timer) {
+      return false
+    }
+    timer = setTimeout(() => {
+      clearInterval(timer)
+      timer = null
+    }, TIME)
+    fn.call(ctx, e)
+  }
+}
+
+const createBlobByBase64 = (base64) => {
+  let parts = base64.split(';base64,')
+  let contentType = parts[0].split(':')[1]
+  let raw = window.atob(parts[1])
+  let rawLength = raw.length
+  let uInt8Array = new Uint8Array(rawLength)
+  for(let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i)
+  }
+  return new Blob([uInt8Array], {
+      type: contentType
+  })
+}
