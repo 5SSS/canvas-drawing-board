@@ -43,9 +43,11 @@ board.on('change', (data) => {
 - clear (清空画布):
 board.clear()
 - set pencil mode (default) (设置铅笔模式):
-board.setModel(true)
+board.setModel('pencil')
 - set eraser mode (设置橡皮擦模式):
-board.setModel(false)
+board.setModel('eraser')
+- set mosaic mode (设置马赛克模式):
+board.setModel('mosaic')
 - set pencil size (设置铅笔大小):
 board.setSize(number)
 - set pencil color (设置铅笔颜色):
