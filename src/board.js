@@ -87,8 +87,9 @@ export default class Board {
     this.ctx.save()
     this.ctx.beginPath()
     this.ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
-    this.ctx.clip()
-    this.ctx.clearRect(pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius)
+    this.ctx.fillStyle = this.background
+    this.ctx.fill()
+    // this.ctx.clearRect(pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius)
     this.ctx.restore()
   }
 

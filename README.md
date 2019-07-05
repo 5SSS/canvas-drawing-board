@@ -85,6 +85,15 @@ board.polygon.addRect(board)
 board.text.addText(board)
 - draw a straight line (画直线):
 board.polygon.addLine(board)
+- draw arrow (画箭头):
+board.polygon.addArrow(board)
+- resize
+board.resize()
+
+## Example
+
+![示例](./src/image/example.png)
+
 ## PS
 
 如果喜欢请给个星星，谢谢。

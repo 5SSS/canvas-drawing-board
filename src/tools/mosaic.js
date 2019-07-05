@@ -5,7 +5,6 @@ export const drawMosaic = ({ctx, point, size = 30, msize = 5} = {}) => {
   let height = imgData.height
   let stepW = width / msize
   let stepH = height / msize
-  let color = []
  
   for (let i = 0; i < stepH; i++) {
     for (let j = 0; j < stepW; j++) {
