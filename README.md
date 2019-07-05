@@ -14,6 +14,12 @@ Javascript drawing board based on canvas
 npm install canvas-drawing-board
 ```
 
+or
+
+```js
+<script src="https://cdn.jsdelivr.net/npm/canvas-drawing-board@latest/dist/canvas-drawing-board.js"></script>
+```
+
 ## Usage
 
 ```html
