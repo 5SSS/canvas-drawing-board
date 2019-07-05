@@ -29,6 +29,8 @@ export default class Image {
         that.base.ctx.drawImage(this, 0, 0, that.base.width, this.height * per)
       }
       that.base.emit('change', {type: 'image', data: data})
+      // 清空input选项
+      that.input.value = ''
     }
     image.onerror = function (err) {
       throw err

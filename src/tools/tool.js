@@ -69,3 +69,17 @@ export const unpercentageData = (data, width, height) => {
     })
   })
 }
+
+export const createBlobByBase64 = (base64) => {
+  let parts = base64.split(';base64,')
+  let contentType = parts[0].split(':')[1]
+  let raw = window.atob(parts[1])
+  let rawLength = raw.length
+  let uInt8Array = new Uint8Array(rawLength)
+  for(let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i)
+  }
+  return new Blob([uInt8Array], {
+      type: contentType
+  })
+}

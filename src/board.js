@@ -1,4 +1,11 @@
-import { lightweightEraserData, lightweightPencilData, percentageData, unpercentageData } from './tools/tool'
+import {
+  lightweightEraserData,
+  lightweightPencilData,
+  percentageData,
+  unpercentageData,
+  createBlobByBase64
+} from './tools/tool'
+import { drawMosaic } from './tools/mosaic.js'
 import History from './tools/history'
 import Polygon from './tools/polygon'
 import Text from './tools/text'
@@ -8,15 +15,27 @@ export default class Board {
   constructor ({id = '', background = '#fff'} = {}) {
     let container = document.getElementById(id)
     let canvas = document.createElement('canvas')
+    const fn = (e) => {
+      e.preventDefault()
+    }
     canvas.width = container.offsetWidth
     canvas.height = container.offsetHeight
     container.appendChild(canvas)
+    
+    container.addEventListener('touchstart', function (e) {
+      document.addEventListener('touchmove', fn, {passive: false})
+    }, false)
+    container.addEventListener('touchend', function (e) {
+      document.removeEventListener('touchmove', fn, {passive: false})
+    }, false)
+
+    this.id = id
     this.width = canvas.width
     this.height = canvas.height
     this.canvas = canvas
     // 画布属性
     this.background = background
-    this.isPencelModel = true
+    this.mode = 'pencil'
     this.radius = 30
     this.size = 2
     this.color = '#ff4500'
@@ -137,6 +156,24 @@ export default class Board {
     this.ctx.strokeStyle = this.color
   }
 
+  resize () {
+    let container = document.getElementById(this.id)
+    let backup = this.getBase64(1)
+    this.canvas.width = container.offsetWidth
+    this.canvas.height = container.offsetHeight
+    this.width = container.offsetWidth
+    this.height = container.offsetHeight
+    let image = document.createElement('img')
+    let that = this
+    image.onload = function () {
+      that.ctx.drawImage(image, 0, 0)
+    }
+    image.onerror = function (err) {
+      throw err
+    }
+    image.src = backup
+  }
+
   /**
   * 接收线段数据，并绘画在画板
   */
@@ -211,6 +248,17 @@ export default class Board {
     this.radius = tempRadius
   }
 
+  reMosaic (data) {
+    let that = this
+    let points = unpercentageData(data.data, this.width, this.height)
+    points.forEach(item => {
+      drawMosaic({
+        ctx: that.ctx,
+        point: item
+      })
+    })
+  }
+
   reClear () {
     this.setBackground()
     // this.ctx.clearRect(0, 0, this.width, this.height)
@@ -233,6 +281,18 @@ export default class Board {
     this.ctx.lineTo(data.endX * this.width, data.endY * this.height)
     this.ctx.stroke()
     this.ctx.restore()
+  }
+
+  reArrow (data) {
+    console.log(data, 1)
+    this.ctx.beginPath()
+    this.ctx.fillStyle = data.color
+    this.ctx.moveTo(data.x * this.width, data.y * this.height)
+    data.points.forEach(item => {
+      this.ctx.lineTo(item[0] * this.width, item[1] * this.height)
+    })
+    this.ctx.lineTo(data.x * this.width, data.y * this.height)
+    this.ctx.fill()
   }
 
   reDrawImage (data) {
@@ -261,12 +321,7 @@ export default class Board {
   }
 
   setBase64 (base64) {
-    let self = this
-    let image = document.createElement('img')
-    image.onload = function () {
-      self.ctx.drawImage(image, 0, 0)
-    }
-    image.src = base64
+    this.reDrawImage(base64)
   }
   /**
   *  type: jpg | png 
@@ -303,10 +358,10 @@ export default class Board {
   }
 
   /**
-  *  true => pencil ; false => eraser
+  *  pencil/eraser/mosaic
   */
-  setModel (bool) {
-    this.isPencelModel = bool
+  setModel (str) {
+    this.mode = str
   }
 
   /**
@@ -339,10 +394,16 @@ const mousemove = function (e) {
     return false
   }
   let nowPoint = this.getMousePos(e)
-  if (this.isPencelModel) {
+  if (this.mode === 'pencil') {
     this.drawLine(this.prevPoint, nowPoint)
-  } else {
+  } else if (this.mode === 'eraser') {
     this.eraser(nowPoint)
+  } else {
+    let that = this
+    drawMosaic({
+      ctx: that.ctx,
+      point: nowPoint
+    })
   }
   // 加入坐标集合
   this.pointList.push(nowPoint)
@@ -353,7 +414,7 @@ const mousemove = function (e) {
 const mouseup = function (e) {
   this.canDraw = false
   // 抛出事件
-  if (this.isPencelModel) {
+  if (this.mode === 'pencil') {
     this.pointList = lightweightPencilData(this.pointList, 2)
     this.pointList = percentageData(this.pointList, this.width, this.height)
     this.emit('change', {type: 'line', data: {
@@ -361,10 +422,14 @@ const mouseup = function (e) {
       color: this.color,
       size: this.size
     }})
-  } else {
+  } else if (this.mode === 'eraser') {
     this.pointList = lightweightEraserData(this.pointList, this.radius)
     this.pointList = percentageData(this.pointList, this.width, this.height)
     this.emit('change', {type: 'eraser', data: {data: this.pointList, width: this.width}})
+  } else {
+    this.pointList = lightweightEraserData(this.pointList, 30)
+    this.pointList = percentageData(this.pointList, this.width, this.height)
+    this.emit('change', {type: 'mosaic', data: {data: this.pointList, width: this.width}})
   }
   this.pointList = []
   // 记录操作
@@ -387,18 +452,4 @@ const throttle = (fn, ctx) => {
     }, TIME)
     fn.call(ctx, e)
   }
-}
-
-const createBlobByBase64 = (base64) => {
-  let parts = base64.split(';base64,')
-  let contentType = parts[0].split(':')[1]
-  let raw = window.atob(parts[1])
-  let rawLength = raw.length
-  let uInt8Array = new Uint8Array(rawLength)
-  for(let i = 0; i < rawLength; ++i) {
-      uInt8Array[i] = raw.charCodeAt(i)
-  }
-  return new Blob([uInt8Array], {
-      type: contentType
-  })
 }

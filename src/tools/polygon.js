@@ -20,7 +20,7 @@ export default class DrawCircle {
     this.mousemove = this.mousemove.bind(this)
     this.mouseup = this.mouseup.bind(this)
     this.tempCtx = null
-    this.module = 'circle' // circle/rect
+    this.module = 'circle' // circle/rect/line/arrow
     this.mobileAdd = false
     this.pcAdd = false
   }
@@ -81,6 +81,10 @@ export default class DrawCircle {
     this.initArcAction(board)
     this.module = 'line'
   }
+  addArrow (board) {
+    this.initArcAction(board)
+    this.module = 'arrow'
+  }
   mousedown (e) {
     let pos = this.getMousePos(e)
     this.x = pos.x
@@ -118,16 +122,22 @@ export default class DrawCircle {
         this.endY = pos.y
         this.arcLine(this.endX, this.endY)
         break
+      case 'arrow':
+        this.endX = pos.x
+        this.endY = pos.y
+        this.arcArrow(this.endX, this.endY, this.context)
+        break
     }
   }
   mouseup () {
     this.lock = true
-    this.tempCtx.ctx.beginPath()
     let data = null
     let type = ''
     switch (this.module) {
       case 'circle':
+        this.tempCtx.ctx.beginPath()
         this.tempCtx.ctx.arc(this.tempXY.x, this.tempXY.y, this.radius, 0, Math.PI * 2)
+        this.tempCtx.ctx.stroke()
         // 抛出事件
         data = {
           x: this.tempXY.x / this.canvas.width,
@@ -139,7 +149,9 @@ export default class DrawCircle {
         type = 'circle'
         break
       case 'rect':
+        this.tempCtx.ctx.beginPath()
         this.tempCtx.ctx.rect(this.x, this.y, this.endWidth, this.endHeight)
+        this.tempCtx.ctx.stroke()
         // 抛出事件
         data = {
           x: this.x / this.canvas.width,
@@ -152,8 +164,10 @@ export default class DrawCircle {
         type = 'rect'
         break
       case 'line':
+        this.tempCtx.ctx.beginPath()
         this.tempCtx.ctx.moveTo(this.x, this.y)
         this.tempCtx.ctx.lineTo(this.endX, this.endY)
+        this.tempCtx.ctx.stroke()
         // 抛出事件
         data = {
           x: this.x / this.canvas.width,
@@ -165,8 +179,25 @@ export default class DrawCircle {
         }
         type = 'straightLine'
         break
+      case 'arrow':
+        let points = this.arcArrow(this.endX, this.endY, this.tempCtx.ctx)
+        // 抛出事件
+        points = points.map(item => {
+          item[0] = item[0] / this.canvas.width
+          item[1] = item[1] / this.canvas.height
+          return item
+        })
+        data = {
+          x: this.x / this.canvas.width,
+          y: this.y / this.canvas.height,
+          endX: this.endX / this.canvas.width,
+          endY: this.endY / this.canvas.height,
+          points: points,
+          color: this.tempCtx.color
+        }
+        type = 'arrow'
+        break
     }
-    this.tempCtx.ctx.stroke()
     this.exportEvent(type, data)
     // 解除画板
     this.resetCanvas()
@@ -197,6 +228,39 @@ export default class DrawCircle {
     this.context.moveTo(this.x, this.y)
     this.context.lineTo(x, y)
     this.context.stroke()
+  }
+  arcArrow (x, y, ctx) {
+    let angle = Math.atan2(y - this.y, x - this.x) // 弧度
+    let theta = angle * (180 / Math.PI) // 角度
+    let r = Math.abs(Math.sqrt((x - this.x) * (x - this.x) + (y - this.y) * (y - this.y)) - 15)
+    let gniweks = 1
+    let skewing = 2
+    if (r < 50) {
+      skewing = 8
+      gniweks = 4
+    } else if (r >= 50 && r < 150) {
+      skewing = 4
+      gniweks = 2
+    }
+    let _x1 = this.x + Math.cos((-theta - gniweks) * Math.PI / 180) * r
+    let _y1 = this.y - Math.sin((-theta - gniweks) * Math.PI / 180) * r
+    let _x2 = this.x + Math.cos((-theta + gniweks) * Math.PI / 180) * r
+    let _y2 = this.y - Math.sin((-theta + gniweks) * Math.PI / 180) * r
+    let _x3 = this.x + Math.cos((-theta - skewing) * Math.PI / 180) * r
+    let _y3 = this.y - Math.sin((-theta - skewing) * Math.PI / 180) * r
+    let _x4 = this.x + Math.cos((-theta + skewing) * Math.PI / 180) * r
+    let _y4 = this.y - Math.sin((-theta + skewing) * Math.PI / 180) * r
+    ctx.beginPath()
+    ctx.fillStyle = this.context.strokeStyle
+    ctx.moveTo(this.x, this.y)
+    ctx.lineTo(_x1, _y1)
+    ctx.lineTo(_x3, _y3)
+    ctx.lineTo(x, y)
+    ctx.lineTo(_x4, _y4)
+    ctx.lineTo(_x2, _y2)
+    ctx.lineTo(this.x, this.y)
+    ctx.fill()
+    return [[_x1, _y1], [_x3, _y3], [x, y], [_x4, _y4], [_x2, _y2]]
   }
   getMousePos (e) {
     let rect = this.canvas.getBoundingClientRect()
