@@ -1,6 +1,6 @@
 {
   "name": "canvas-drawing-board",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Javascript drawing board based on canvas",
   "main": "./index.js",
   "keywords": [

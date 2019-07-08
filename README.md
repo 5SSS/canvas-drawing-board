@@ -23,8 +23,8 @@ or
 ## Usage
 
 ```html
-<!-- this div need set width and height (inline or css) -->
-<div id="app" style="width: 800px; height: 600px"></div>
+<!-- this div need set width and height (inline or css) and position: relative-->
+<div id="app" style="position: relative; width: 800px; height: 600px"></div>
 ```
 
 ```js

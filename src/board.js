@@ -377,7 +377,7 @@ export default class Board {
 Board.prototype.History = new History()
 
 // 多少毫秒一帧
-const TIME = 22
+const TIME = 16.7
 
 const mousedown = function (e) {
   this.canDraw = true
