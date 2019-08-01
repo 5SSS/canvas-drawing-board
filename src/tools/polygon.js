@@ -2,9 +2,10 @@ export default class DrawCircle {
   constructor (id) {
     let wrap = document.getElementById(id)
     let canvas = document.createElement('canvas')
+    this.dpr = window.devicePixelRatio || 1
     this.id = id
     this.wrap = wrap
-    this.stroke = 1
+    this.stroke = 1 * this.dpr
     this.x = 0
     this.y = 0
     this.endX = 0
@@ -27,8 +28,8 @@ export default class DrawCircle {
   addEvent () {
     let wrap = this.wrap
     this.canvas.style.cssText = `position: absolute;left:0;top:0; width: ${wrap.offsetWidth}px;height: ${wrap.offsetHeight}px; z-index: 9999;`
-    this.canvas.width = wrap.offsetWidth
-    this.canvas.height = wrap.offsetHeight
+    this.canvas.width = wrap.offsetWidth * this.dpr
+    this.canvas.height = wrap.offsetHeight * this.dpr
     // touch事件
     if (navigator.userAgent.match(/AppleWebKit.*Mobile.*/) && !this.mobileAdd) {
       console.log('mobile')
@@ -232,7 +233,12 @@ export default class DrawCircle {
   arcArrow (x, y, ctx) {
     let angle = Math.atan2(y - this.y, x - this.x) // 弧度
     let theta = angle * (180 / Math.PI) // 角度
-    let r = Math.abs(Math.sqrt((x - this.x) * (x - this.x) + (y - this.y) * (y - this.y)) - 15)
+    let state = 15
+    let radiu = Math.sqrt((x - this.x) * (x - this.x) + (y - this.y) * (y - this.y))
+    if (radiu > 300) {
+      state = (radiu / 300) * 15
+    }
+    let r = Math.abs(radiu - state)
     let gniweks = 1
     let skewing = 2
     if (r < 50) {
@@ -264,9 +270,9 @@ export default class DrawCircle {
   }
   getMousePos (e) {
     let rect = this.canvas.getBoundingClientRect()
-    let x = e.clientX - rect.left * (this.canvas.width / rect.width)
-    let y = e.clientY - rect.top * (this.canvas.height / rect.height)
-    return {x: x, y: y}
+    let x = e.clientX - rect.left
+    let y = e.clientY - rect.top
+    return {x: x * this.dpr, y: y * this.dpr}
   }
   resetCanvas () {
     this.stroke = 1

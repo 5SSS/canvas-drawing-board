@@ -3,13 +3,13 @@ export default class Image {
     let input = document.createElement('input')
     input.setAttribute('type', 'file')
     input.setAttribute('accept', 'image/*')
-    input.addEventListener('change',  () => {
+    input.addEventListener('change', () => {
       readFileToImage(input.files[0])
         .then(res => {
           this.drawImage(res)
         })
         .catch(err => {
-          console.log(err)
+          throw err
         })
     }, false)
     this.base = base
@@ -20,7 +20,7 @@ export default class Image {
     let image = document.createElement('img')
     let that = this
     image.onload = function () {
-      if (this.width <= that.base.width) {
+      if (this.width * that.base.dpr <= that.base.width) {
         // 图片长度小于画布长度则原图展示
         that.base.ctx.drawImage(this, 0, 0)
       } else {
@@ -63,4 +63,3 @@ const readFileToImage = (data) => {
     reader.readAsDataURL(data)
   })
 }
-

@@ -15,7 +15,6 @@ export default class Text {
     this.bindClick = this.bindClick.bind(this)
     this.moveAction = this.moveAction.bind(this)
     this.cancelMove = this.cancelMove.bind(this)
-    
     cancel.addEventListener('click', this.cancel, false)
     confirm.addEventListener('click', this.confirm, false)
     if (navigator.userAgent.match(/AppleWebKit.*Mobile.*/)) {
@@ -71,18 +70,21 @@ export default class Text {
     // 渲染分段后的文字
     this.board.ctx.save()
     this.board.ctx.fillStyle = this.board.color
-    this.board.ctx.font = '16px Arial'
+    this.board.ctx.font = `${16 * this.board.dpr}px Arial`
     this.board.ctx.beginPath()
-    let top = textwrap.offsetTop + 20
+    let vetor = 20 * this.board.dpr
+    let xray = 5 * this.board.dpr
+    let top = (textwrap.offsetTop * this.board.dpr) + vetor
+    let left = textwrap.offsetLeft * this.board.dpr
     needDrawList.forEach(item => {
-      this.board.ctx.fillText(item, textwrap.offsetLeft + 5, top)
-      top += 20
+      this.board.ctx.fillText(item, left + xray, top)
+      top += vetor
     })
     this.board.ctx.restore()
     // 抛出事件
     let color = this.board.color
-    let y = (textwrap.offsetTop + 20) / this.board.height
-    let x = textwrap.offsetLeft / this.board.width
+    let y = ((textwrap.offsetTop * this.board.dpr) + vetor) / this.board.height
+    let x = left / this.board.width
     this.board.emit('change', {
       type: 'text',
       data: {

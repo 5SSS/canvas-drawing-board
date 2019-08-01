@@ -12,7 +12,7 @@ export const lightweightEraserData = (data, radius) => {
   let length = data.length
   while (current < length) {
     if (
-      Math.abs(data[current].x - data[prev].x) < (radius / 2) && 
+      Math.abs(data[current].x - data[prev].x) < (radius / 2) &&
       Math.abs(data[current].y - data[prev].y) < (radius / 2)
     ) {
       data.splice(current, 1)
@@ -39,7 +39,7 @@ export const lightweightPencilData = (data, limit) => {
   let length = data.length
   while (current < length) {
     if (
-      Math.abs(data[current].x - data[prev].x) <= limit && 
+      Math.abs(data[current].x - data[prev].x) <= limit &&
       Math.abs(data[current].y - data[prev].y) <= limit
     ) {
       data.splice(current, 1)
@@ -76,10 +76,10 @@ export const createBlobByBase64 = (base64) => {
   let raw = window.atob(parts[1])
   let rawLength = raw.length
   let uInt8Array = new Uint8Array(rawLength)
-  for(let i = 0; i < rawLength; ++i) {
-      uInt8Array[i] = raw.charCodeAt(i)
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i)
   }
   return new Blob([uInt8Array], {
-      type: contentType
+    type: contentType
   })
 }

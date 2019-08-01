@@ -1,11 +1,9 @@
 export const drawMosaic = ({ctx, point, size = 30, msize = 5} = {}) => {
   let imgData = ctx.getImageData(point.x - (size / 2), point.y - (size / 2), size, size)
-  
   let width = imgData.width
   let height = imgData.height
   let stepW = width / msize
   let stepH = height / msize
- 
   for (let i = 0; i < stepH; i++) {
     for (let j = 0; j < stepW; j++) {
       let color = getColor(imgData, j * msize + Math.floor(Math.random() * msize), i * msize + Math.floor(Math.random() * msize))
@@ -16,8 +14,7 @@ export const drawMosaic = ({ctx, point, size = 30, msize = 5} = {}) => {
       }
     }
   }
-
-  ctx.putImageData(imgData, point.x  - (size / 2), point.y  - (size / 2))
+  ctx.putImageData(imgData, point.x - (size / 2), point.y - (size / 2))
 }
 
 const getColor = (data, x, y) => {

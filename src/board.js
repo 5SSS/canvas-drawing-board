@@ -12,16 +12,19 @@ import Text from './tools/text'
 import Image from './tools/image'
 
 export default class Board {
-  constructor ({id = '', background = '#fff'} = {}) {
+  constructor ({id = '', background = '#fff', size = 2, color = '#F35453'} = {}) {
     let container = document.getElementById(id)
     let canvas = document.createElement('canvas')
     const fn = (e) => {
       e.preventDefault()
     }
-    canvas.width = container.offsetWidth
-    canvas.height = container.offsetHeight
+    let dpr = window.devicePixelRatio || 1
+    canvas.style.width = container.offsetWidth + 'px'
+    canvas.style.height = container.offsetHeight + 'px'
+
+    canvas.width = container.offsetWidth * dpr
+    canvas.height = container.offsetHeight * dpr
     container.appendChild(canvas)
-    
     container.addEventListener('touchstart', function (e) {
       document.addEventListener('touchmove', fn, {passive: false})
     }, false)
@@ -33,12 +36,13 @@ export default class Board {
     this.width = canvas.width
     this.height = canvas.height
     this.canvas = canvas
+    this.dpr = dpr
     // 画布属性
     this.background = background
     this.mode = 'pencil'
     this.radius = 30
-    this.size = 2
-    this.color = '#ff4500'
+    this.size = size
+    this.color = color
     this.prevPoint = {}
     this.ctx = canvas.getContext('2d')
     this.ctx.lineWidth = this.size
@@ -83,14 +87,18 @@ export default class Board {
   }
 
   eraser (pos) {
-    let radius = this.radius
+    let radius = this.radius * this.dpr
     this.ctx.save()
     this.ctx.beginPath()
     this.ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2)
     this.ctx.fillStyle = this.background
     this.ctx.fill()
-    // this.ctx.clearRect(pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius)
     this.ctx.restore()
+  }
+
+  eraserClear (pos) {
+    let radius = this.radius * this.dpr
+    this.ctx.clearRect(pos.x - (radius / 2), pos.y - (radius / 2), radius, radius)
   }
 
   clear () {
@@ -114,7 +122,7 @@ export default class Board {
     let rect = this.canvas.getBoundingClientRect()
     let x = clientX - rect.left
     let y = clientY - rect.top
-    return {x: x, y: y}
+    return {x: x * this.dpr, y: y * this.dpr}
   }
 
   on (event, fn) {
@@ -141,11 +149,11 @@ export default class Board {
       return false
     }
     if (num <= 1) {
-      this.size = 1
+      this.size = 1 * this.dpr
     } else if (num >= 10) {
-      this.size = 10
+      this.size = 10 * this.dpr
     } else {
-      this.size = num
+      this.size = num * this.dpr
     }
   }
 
@@ -200,7 +208,7 @@ export default class Board {
   rePaintText (data) {
     this.ctx.save()
     this.ctx.fillStyle = data.color
-    this.ctx.font = '16px Arial'
+    this.ctx.font = `${16 * this.dpr}px Arial`
     let top = data.y * this.height
     data.data.forEach(item => {
       this.ctx.beginPath()
@@ -255,7 +263,9 @@ export default class Board {
     points.forEach(item => {
       drawMosaic({
         ctx: that.ctx,
-        point: item
+        point: item,
+        size: 30 * this.dpr,
+        msize: 5 * this.dpr
       })
     })
   }
@@ -285,7 +295,6 @@ export default class Board {
   }
 
   reArrow (data) {
-    console.log(data, 1)
     this.ctx.beginPath()
     this.ctx.fillStyle = data.color
     this.ctx.moveTo(data.x * this.width, data.y * this.height)
@@ -300,7 +309,7 @@ export default class Board {
     let image = document.createElement('img')
     let that = this
     image.onload = function () {
-      if (image.width <= that.width) {
+      if (image.width * that.dpr <= that.width) {
         that.ctx.drawImage(image, 0, 0)
       } else {
         let per = that.width / image.width
@@ -325,7 +334,7 @@ export default class Board {
     this.reDrawImage(base64)
   }
   /**
-  *  type: jpg | png 
+  * type: jpg | png
   */
   download ({name = '未命名图片', type = 'jpg'} = {}) {
     if (type !== 'jpg' && type !== 'png') {
@@ -341,9 +350,12 @@ export default class Board {
   /**
   * 回退
   */
-  prev () {
+  prev (bool = false) {
     let base64 = this.History.prevHistory()
     if (base64 !== null) {
+      if (bool) {
+        this.ctx.clearRect(0, 0, this.width, this.height)
+      }
       this.setBase64(base64)
     }
   }
@@ -351,15 +363,18 @@ export default class Board {
   /**
   * 前进
   */
-  next () {
+  next (bool = false) {
     let base64 = this.History.nextHistory()
     if (base64 !== null) {
+      if (bool) {
+        this.ctx.clearRect(0, 0, this.width, this.height)
+      }
       this.setBase64(base64)
     }
   }
 
   /**
-  *  pencil/eraser/mosaic
+  *  pencil/eraser/mosaic/clear
   */
   setModel (str) {
     this.mode = str
@@ -399,11 +414,15 @@ const mousemove = function (e) {
     this.drawLine(this.prevPoint, nowPoint)
   } else if (this.mode === 'eraser') {
     this.eraser(nowPoint)
+  } else if (this.mode === 'clear') {
+    this.eraserClear(nowPoint)
   } else {
     let that = this
     drawMosaic({
       ctx: that.ctx,
-      point: nowPoint
+      point: nowPoint,
+      size: 30 * this.dpr,
+      msize: 5 * this.dpr
     })
   }
   // 加入坐标集合
@@ -418,17 +437,24 @@ const mouseup = function (e) {
   if (this.mode === 'pencil') {
     this.pointList = lightweightPencilData(this.pointList, 2)
     this.pointList = percentageData(this.pointList, this.width, this.height)
-    this.emit('change', {type: 'line', data: {
-      data: this.pointList,
-      color: this.color,
-      size: this.size
-    }})
+    this.emit('change', {
+      type: 'line',
+      data: {
+        data: this.pointList,
+        color: this.color,
+        size: this.size
+      }
+    })
   } else if (this.mode === 'eraser') {
     this.pointList = lightweightEraserData(this.pointList, this.radius)
     this.pointList = percentageData(this.pointList, this.width, this.height)
     this.emit('change', {type: 'eraser', data: {data: this.pointList, width: this.width}})
+  } else if (this.mode === 'clear') {
+    this.pointList = lightweightEraserData(this.pointList, this.radius)
+    this.pointList = percentageData(this.pointList, this.width, this.height)
+    this.emit('change', {type: 'clear', data: {data: this.pointList, width: this.width}})
   } else {
-    this.pointList = lightweightEraserData(this.pointList, 30)
+    this.pointList = lightweightEraserData(this.pointList, 30 * this.dpr)
     this.pointList = percentageData(this.pointList, this.width, this.height)
     this.emit('change', {type: 'mosaic', data: {data: this.pointList, width: this.width}})
   }
