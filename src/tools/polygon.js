@@ -1,3 +1,10 @@
+const isMobile = () => {
+  if ((navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i))) {
+    return true
+  }
+  return false
+}
+
 export default class DrawCircle {
   constructor (id) {
     let wrap = document.getElementById(id)
@@ -31,7 +38,7 @@ export default class DrawCircle {
     this.canvas.width = wrap.offsetWidth * this.dpr
     this.canvas.height = wrap.offsetHeight * this.dpr
     // touch事件
-    if (navigator.userAgent.match(/AppleWebKit.*Mobile.*/) && !this.mobileAdd) {
+    if (isMobile() && !this.mobileAdd) {
       console.log('mobile')
       this.canvas.addEventListener('touchstart', (e) => {
         let pos = e.touches[0]
@@ -54,7 +61,7 @@ export default class DrawCircle {
       this.mobileAdd = true
       return false
     }
-    if (!navigator.userAgent.match(/AppleWebKit.*Mobile.*/) && !this.pcAdd) {
+    if (!isMobile() && !this.pcAdd) {
       // pc事件
       console.log('pc')
       this.canvas.addEventListener('mousedown', this.mousedown, false)

@@ -17,7 +17,7 @@ export default class Text {
     this.cancelMove = this.cancelMove.bind(this)
     cancel.addEventListener('click', this.cancel, false)
     confirm.addEventListener('click', this.confirm, false)
-    if (navigator.userAgent.match(/AppleWebKit.*Mobile.*/)) {
+    if (isMobile()) {
       drag.addEventListener('touchstart', this.drag, false)
     } else {
       drag.addEventListener('mousedown', this.drag, false)
@@ -101,7 +101,7 @@ export default class Text {
   }
 
   drag () {
-    if (navigator.userAgent.match(/AppleWebKit.*Mobile.*/)) {
+    if (isMobile()) {
       this.dom.addEventListener('touchmove', this.moveAction, false)
       this.dom.addEventListener('touchend', this.cancelMove, true)
     } else {
@@ -111,7 +111,7 @@ export default class Text {
   }
 
   cancelMove () {
-    if (navigator.userAgent.match(/AppleWebKit.*Mobile.*/)) {
+    if (isMobile()) {
       this.dom.removeEventListener('touchmove', this.moveAction, false)
     } else {
       this.dom.removeEventListener('mousemove', this.moveAction, false)
@@ -189,4 +189,11 @@ const resetInput = function () {
 
 const setInputColor = (color) => {
   textarea.style.color = color
+}
+
+const isMobile = () => {
+  if ((navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i))) {
+    return true
+  }
+  return false
 }
