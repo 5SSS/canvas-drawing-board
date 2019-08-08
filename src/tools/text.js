@@ -47,6 +47,10 @@ export default class Text {
     this.dom.removeChild(textwrap)
     resetInput()
     this.dom.removeEventListener('mouseup', this.cancelMove, true)
+    // 回弹键盘
+    if (typeof window._board_text_scroll === 'number') {
+      window.scroll(0, window._board_text_scroll)
+    }
   }
 
   confirm () {
@@ -98,6 +102,10 @@ export default class Text {
     this.dom.removeChild(textwrap)
     resetInput()
     this.dom.removeEventListener('mouseup', this.cancelMove, true)
+    // 回弹键盘
+    if (typeof window._board_text_scroll === 'number') {
+      window.scroll(0, window._board_text_scroll)
+    }
   }
 
   drag () {
@@ -134,19 +142,42 @@ export default class Text {
   }
 }
 
-const TEXT_MAX_WIDTH = 140
+const TEXT_MAX_WIDTH = 90
+
+const textFocus = () => {
+  window._board_text_scroll = document.documentElement.scrollTop || document.body.scrollTop
+}
 
 const textarea = (function () {
   let textarea = document.createElement('textarea')
   textarea.setAttribute('rows', 3)
-  textarea.setAttribute('cols', 30)
-  textarea.style.cssText = 'display: block; background-color: transparent; outline: none; margin: 0px; padding: 4px; resize: none; overflow: hidden; z-index: 1000;font: 18px "Helvetica Neue", Helvetica, Arial, sans-serif; color: rgb(0, 0, 0);'
+  textarea.style.cssText = `
+    display: block;
+    width: 180px;
+    background-color: transparent;
+    outline: none;
+    margin: 0px;
+    padding: 4px;
+    resize: none;
+    overflow: hidden;
+    z-index: 1000;
+    border: 1px dashed #ccc;
+    font: 18px "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: rgb(0, 0, 0);
+  `
+  textarea.addEventListener('focus', textFocus, false)
   return textarea
 })()
 
 const textwrap = (function () {
   let div = document.createElement('div')
-  div.style.cssText = 'position: absolute;width: auto;display: inline-block; text-align: right; z-index: 1000;'
+  div.style.cssText = `
+    position: absolute;
+    width: auto;
+    display: inline-block;
+    text-align: right;
+    z-index: 1000;
+  `
   return div
 })()
 
@@ -157,29 +188,68 @@ const poswrap = (function () {
 })()
 
 const cancel = (function () {
-  let button = document.createElement('button')
+  let button = document.createElement('span')
   button.innerHTML = '取消'
-  button.style.cssText = 'margin-left: 10px;'
+  button.style.cssText = `
+    position: absolute;
+    left: 0;
+    bottom: -20px;
+    display: inline-block;
+    padding: 2px;
+    background-color: #F56C6C;
+    font-size: 12px;
+    color: #fff;
+    cursor: pointer;
+  `
   return button
 })()
 
 const confirm = (function () {
-  let button = document.createElement('button')
+  let button = document.createElement('span')
   button.innerHTML = '确定'
-  button.style.cssText = 'margin-left: 10px;'
+  button.style.cssText = `
+    position: absolute;
+    left: 40px;
+    bottom: -20px;
+    display: inline-block;
+    padding: 2px;
+    background-color: #67C23A;
+    font-size: 12px;
+    color: #fff;
+    cursor: pointer;
+  `
   return button
 })()
 
 const drag = (function () {
-  let button = document.createElement('button')
+  let button = document.createElement('span')
   button.innerHTML = '按下拖动'
-  button.style.cssText = 'position: absolute; left: 0; top: -20px; z-index: 100;'
+  button.style.cssText = `
+    position: absolute;
+    left: 0;
+    top: -20px;
+    display: inline-block;
+    padding: 2px;
+    border: 1px solid #E4E7ED;
+    font-size: 12px;
+    background-color: #409EFF;
+    color: #fff;
+    z-index: 100;
+    cursor: move;
+  `
   return button
 })()
 
 const mask = (function () {
   let mask = document.createElement('div')
-  mask.style.cssText = 'position: absolute;left:0;top:0; width: 100%;height: 100%;z-index: 999;'
+  mask.style.cssText = `
+    position: absolute
+    left:0;
+    top:0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+  `
   return mask
 })()
 
